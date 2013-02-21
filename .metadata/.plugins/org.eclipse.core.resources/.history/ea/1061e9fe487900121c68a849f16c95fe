@@ -23,24 +23,19 @@ public class Listen extends Activity {
         setContentView(R.layout.activity_listen);
     	findViewById(R.id.listen_button).setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
-				
+				AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
+		        builder.setTitle("Title");
+		        builder.setMessage("yay, it works!");
+		        builder.setNeutralButton("ok", new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int arg1) {
+						dialog.dismiss();
+					}
+				});
+		        builder.setCancelable(false);
+		        final AlertDialog myAlertDialog = builder.create();
+		        myAlertDialog.show();
 			}
 		});
     }
-	
-	public void Alert(String title, String message, View v)
-	{
-		AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
-        builder.setTitle(title);
-        builder.setMessage(message);
-        builder.setNeutralButton("ok", new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int arg1) {
-				dialog.dismiss();
-			}
-		});
-        builder.setCancelable(false);
-        final AlertDialog myAlertDialog = builder.create();
-        myAlertDialog.show();
-	}
 }
