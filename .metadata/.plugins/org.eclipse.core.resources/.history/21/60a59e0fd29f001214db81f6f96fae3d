@@ -1,9 +1,5 @@
 package com.example.coursework;
 
-import java.io.OutputStreamWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -50,9 +46,10 @@ public class Listen extends Activity {
     {
         public void run() 
         {
-        	amplitude = getAmplitude();        	
+        	amplitude = getAmplitude();
+        	
         	stopRecording();
-        	postResult(amplitude);
+        	alert("Amplitude", "So this are the values: " + amplitude);
         }
     };
 	
@@ -111,7 +108,7 @@ public class Listen extends Activity {
         try {
             mRecorder.prepare();
         } catch (Exception e) {
-            alert("Audio recording failed", "Run to the hills... \n" + e.getMessage());
+            alert("Audio recording failed", "Run to the hills");
         }
     	mRecorder.start();
     	mRecorder.getMaxAmplitude();
@@ -132,27 +129,8 @@ public class Listen extends Activity {
 		try {
 			return mRecorder.getMaxAmplitude();
 		} catch (Exception e) {
-            alert("Audio recording failed", "Run to the hills... \n" + e.getMessage());
+            alert("Audio recording failed", "Run to the hills");
             return -1;
-        }
-	}
-
-	/* ############################## RESULT POSTING PART ############################## */
-	private void postResult(double result)
-	{
-		alert("Amplitude", "So this are the values: " + amplitude);
-		
-		try{
-		URL url = new URL("http://api.cosm.com/v2/feeds/123308");
-		HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
-		httpCon.setDoOutput(true);
-		httpCon.setRequestMethod("PUT");
-		OutputStreamWriter out = new OutputStreamWriter(
-		    httpCon.getOutputStream());
-		out.write("{\"datastreams\":[{\"id\":\"reading_"+result+"\", \"max\": "+result+", \"latitude\":"+latitude+", \"longitude\":"+longitude+"}]}");
-		out.close();
-		}catch (Exception e) {
-            alert("Result sending failed", "Run to the hills... \n" + e.getMessage());
         }
 	}
 }

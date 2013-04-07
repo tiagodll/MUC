@@ -50,9 +50,10 @@ public class Listen extends Activity {
     {
         public void run() 
         {
-        	amplitude = getAmplitude();        	
+        	amplitude = getAmplitude();
+        	
         	stopRecording();
-        	postResult(amplitude);
+        	alert("Amplitude", "So this are the values: " + amplitude);
         }
     };
 	
@@ -140,8 +141,6 @@ public class Listen extends Activity {
 	/* ############################## RESULT POSTING PART ############################## */
 	private void postResult(double result)
 	{
-		alert("Amplitude", "So this are the values: " + amplitude);
-		
 		try{
 		URL url = new URL("http://api.cosm.com/v2/feeds/123308");
 		HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
@@ -149,7 +148,7 @@ public class Listen extends Activity {
 		httpCon.setRequestMethod("PUT");
 		OutputStreamWriter out = new OutputStreamWriter(
 		    httpCon.getOutputStream());
-		out.write("{\"datastreams\":[{\"id\":\"reading_"+result+"\", \"max\": "+result+", \"latitude\":"+latitude+", \"longitude\":"+longitude+"}]}");
+		out.write("{\"datastreams\":[{\"id\":\"reading_"+result+"\", \"max\": "+result+"}]}");
 		out.close();
 		}catch (Exception e) {
             alert("Result sending failed", "Run to the hills... \n" + e.getMessage());

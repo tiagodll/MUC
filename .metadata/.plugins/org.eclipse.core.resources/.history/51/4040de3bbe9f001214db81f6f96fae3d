@@ -1,9 +1,5 @@
 package com.example.coursework;
 
-import java.io.OutputStreamWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -21,7 +17,7 @@ import android.os.Handler;
 
 public class Listen extends Activity {
 	
-	double latitude, longitude, amplitude;
+	double latitude, longitude;
 	private MediaRecorder mRecorder = null;
 	private Handler mPeriodicEventHandler;
 	View currentView = null;
@@ -32,7 +28,6 @@ public class Listen extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        amplitude = -1;
         latitude = -1;
         longitude = -1;
         setContentView(R.layout.activity_listen);
@@ -50,9 +45,7 @@ public class Listen extends Activity {
     {
         public void run() 
         {
-        	amplitude = getAmplitude();        	
         	stopRecording();
-        	postResult(amplitude);
         }
     };
 	
@@ -100,21 +93,20 @@ public class Listen extends Activity {
 
 	/* ############################## SOUND RECORDING PART ############################## */
 	private void startRecording() {
-		//String mFileName = Environment.getExternalStorageDirectory().getAbsolutePath() + "/testfile.3gp";
+		String mFileName = Environment.getExternalStorageDirectory().getAbsolutePath() + "/testfile.3gp";
         mRecorder = new MediaRecorder();
         mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+        mRecorder.setOutputFile(mFileName);
         mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-        //mRecorder.setOutputFile(mFileName);
-        mRecorder.setOutputFile("/dev/null");
 
         try {
             mRecorder.prepare();
         } catch (Exception e) {
-            alert("Audio recording failed", "Run to the hills... \n" + e.getMessage());
+            alert("Audio recording failed", "Run to the hills");
         }
-    	mRecorder.start();
-    	mRecorder.getMaxAmplitude();
+
+        mRecorder.start();
     }
 	private void stopRecording() {
         mRecorder.stop();
@@ -127,32 +119,4 @@ public class Listen extends Activity {
         mPeriodicEventHandler.removeCallbacks(doPeriodicTask);      
         super.onDestroy();
     }
-	
-	public double getAmplitude() {
-		try {
-			return mRecorder.getMaxAmplitude();
-		} catch (Exception e) {
-            alert("Audio recording failed", "Run to the hills... \n" + e.getMessage());
-            return -1;
-        }
-	}
-
-	/* ############################## RESULT POSTING PART ############################## */
-	private void postResult(double result)
-	{
-		alert("Amplitude", "So this are the values: " + amplitude);
-		
-		try{
-		URL url = new URL("http://api.cosm.com/v2/feeds/123308");
-		HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
-		httpCon.setDoOutput(true);
-		httpCon.setRequestMethod("PUT");
-		OutputStreamWriter out = new OutputStreamWriter(
-		    httpCon.getOutputStream());
-		out.write("{\"datastreams\":[{\"id\":\"reading_"+result+"\", \"max\": "+result+", \"latitude\":"+latitude+", \"longitude\":"+longitude+"}]}");
-		out.close();
-		}catch (Exception e) {
-            alert("Result sending failed", "Run to the hills... \n" + e.getMessage());
-        }
-	}
 }
