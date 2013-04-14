@@ -25,23 +25,25 @@ import com.ubhave.sensormanager.sensors.SensorUtils;
 
 public class Listen extends Activity {
 	
-	double latitude, longitude, amplitude;
+	double latitude, longitude, soundPressureLevel;
 	View currentView = null;
 	
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        amplitude = -1;
+        soundPressureLevel = -1;
         latitude = -1;
         longitude = -1;
         setContentView(R.layout.activity_listen);
     	findViewById(R.id.listen_button).setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				currentView = v;
-				amplitude = getAmplitude();
+				String location = getLocation();
+				soundPressureLevel = getSoundPressureLevel();
 				try {
-					publishResult(amplitude);
+					publishResult(soundPressureLevel);
+					alert("Results", "Your locaion is " + location + " and the sound pressure level in your locaion is " + soundPressureLevel + "db");
 				} catch (Exception e) {
 					alert("Result sending failed", "Run to the hills... \n" + e.getMessage());
 				}
@@ -66,7 +68,7 @@ public class Listen extends Activity {
 	}
 	
 	/* ############################## GEOLOCATION PART ############################## */
-	private String getLocation ()
+	private String getLocation()
 	{
 	    LocationManager locationManager = (LocationManager)getSystemService (LOCATION_SERVICE);
 	    String bestProvider = locationManager.getBestProvider (new Criteria (), false);
@@ -92,7 +94,7 @@ public class Listen extends Activity {
 	};
 
 	/* ############################## SOUND RECORDING PART ############################## */
-	public int getAmplitude() {
+	public int getSoundPressureLevel() {
 		ESSensorManager esSensorManager = null; //create a ESSensorManager object
 		SensorData noise = null;
 		try { 
