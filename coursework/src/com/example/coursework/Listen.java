@@ -1,52 +1,32 @@
 package com.example.coursework;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.ResponseHandler;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicNameValuePair;
-import org.json.JSONObject;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.media.MediaRecorder;
 import android.os.Bundle;
-import android.os.Environment;
+import android.telephony.TelephonyManager;
 import android.view.View;
-import android.os.Handler;
 
+import com.ubhave.dataformatter.csv.CSVFormatter;
+import com.ubhave.sensormanager.ESException;
+import com.ubhave.sensormanager.ESSensorManager;
+import com.ubhave.sensormanager.data.SensorData;
+import com.ubhave.sensormanager.sensors.SensorUtils;
 
 public class Listen extends Activity {
 	
 	double latitude, longitude, amplitude;
-	private MediaRecorder mRecorder = null;
-	private Handler mPeriodicEventHandler;
 	View currentView = null;
-	
-
 	
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,27 +39,15 @@ public class Listen extends Activity {
     	findViewById(R.id.listen_button).setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				currentView = v;
-				startRecording();
-				mPeriodicEventHandler = new Handler();
-			    mPeriodicEventHandler.postDelayed(doPeriodicTask, 3000);			    
-				//alert("cool", getLocation());
+				amplitude = getAmplitude();
+				try {
+					publishResult(amplitude);
+				} catch (Exception e) {
+					alert("Result sending failed", "Run to the hills... \n" + e.getMessage());
+				}
 			}
 		});
     }
-	private Runnable doPeriodicTask = new Runnable()
-    {
-        public void run() 
-        {
-        	amplitude = getAmplitude();        	
-        	stopRecording();
-    		try {
-				publishResult(amplitude);
-			} catch (Exception e) {
-				e.printStackTrace();
-				alert("Result sending failed", "Run to the hills... \n" + e.getMessage());
-			}
-        }
-    };
 	
 	public void alert(String title, String message)
 	{
@@ -124,48 +92,41 @@ public class Listen extends Activity {
 	};
 
 	/* ############################## SOUND RECORDING PART ############################## */
-	private void startRecording() {
-		//String mFileName = Environment.getExternalStorageDirectory().getAbsolutePath() + "/testfile.3gp";
-        mRecorder = new MediaRecorder();
-        mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-        //mRecorder.setOutputFile(mFileName);
-        mRecorder.setOutputFile("/dev/null");
-
-        try {
-            mRecorder.prepare();
-        } catch (Exception e) {
-            alert("Audio recording failed", "Run to the hills... \n" + e.getMessage());
-        }
-    	mRecorder.start();
-    	mRecorder.getMaxAmplitude();
-    }
-	private void stopRecording() {
-        mRecorder.stop();
-        mRecorder.release();
-        mRecorder = null;
-    }
-	@Override
-    public void onDestroy() {
-
-        mPeriodicEventHandler.removeCallbacks(doPeriodicTask);      
-        super.onDestroy();
-    }
-	
-	public double getAmplitude() {
-		try {
-			return mRecorder.getMaxAmplitude();
-		} catch (Exception e) {
-            alert("Audio recording failed", "Run to the hills... \n" + e.getMessage());
-            return -1;
-        }
+	public int getAmplitude() {
+		ESSensorManager esSensorManager = null; //create a ESSensorManager object
+		SensorData noise = null;
+		try { 
+			esSensorManager = ESSensorManager.getSensorManager(Listen.this.getApplicationContext());  
+			noise = esSensorManager.getDataFromSensor(SensorUtils.SENSOR_TYPE_MICROPHONE);
+		} catch (ESException e) {
+			e.printStackTrace();
+			alert("Audio recording failed", "Run to the hills... \n" + e.getMessage());
+		}
+		CSVFormatter formatter = CSVFormatter.getCSVFormatter(SensorUtils.SENSOR_TYPE_MICROPHONE);
+		String csv = formatter.toString(noise);
+		
+	    String[] myData=csv.split(",");  //convert csv data to an array	    
+	    int soundPressureLevelint=0, Prms=0, squareSums=0, Pref=20;
+	   
+	    //calculate sound pressure level	    
+	    for (int i=4;i<myData.length;i++){
+	    	int x = Integer.parseInt(myData[i]);
+	    	double y = x*x;
+	    	squareSums=(int) (squareSums + y) ;
+	    }
+	    Prms = (int) Math.sqrt(squareSums/(myData.length-4));	
+	    soundPressureLevelint = (int) (20*Math.log10(Prms/Pref));
+	    return soundPressureLevelint;
 	}
 
 	/* ############################## RESULT POSTING PART ############################## */
 	private void publishResult(double result) throws Exception
 	{
-		alert("Amplitude", "So this are the values: " + amplitude);
+		TelephonyManager tManager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE); //get the phone id 
+		String phoneID = tManager.getDeviceId();
+		
+		String url = "http://api.cosm.com/v2/feeds/125086?key=_IlYBldHLBC-ogLz2OMwXRCURmOSAKxIVXRsMi9xZ1ZUZz0g";
+		 
 		String req = "{";
 		req += "\"title\":\"MUC\",";
 		req += "\"version\":\"1.0.0\",";
@@ -176,32 +137,16 @@ public class Listen extends Activity {
 		req += "\"lon\":"+longitude+",";
 		req += "\"domain\":\"physical\"";
 		req += "},";
-		req += "\"datastreams\" : [{ \"current_value\" : \""+result+"\", \"id\" : \"" + latitude + "-" + longitude + "\" }]";
+		req += "\"datastreams\" : [{ \"current_value\" : \""+result+"\", \"id\" : \"" + phoneID + "\" }]";
 		req += "}";
-		
-		String url = "http://api.cosm.com/v2/feeds/125086?key=_IlYBldHLBC-ogLz2OMwXRCURmOSAKxIVXRsMi9xZ1ZUZz0g";
 		
 		DefaultHttpClient httpclient = new DefaultHttpClient();
 		HttpPut httput = new HttpPut(url);
 		StringEntity se = new StringEntity(req);
 		httput.setEntity(se);
-		//httput.setHeader("Accept", "application/json");
 		httput.setHeader("Content-type", "text/json");
 
 		ResponseHandler responseHandler = new BasicResponseHandler();
-		String response = httpclient.execute(httput, responseHandler);//*/
-		
-		/*try{
-		URL url = new URL(url);
-		HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
-		httpCon.setDoOutput(true);
-		httpCon.setRequestMethod("PUT");
-		OutputStreamWriter out = new OutputStreamWriter(
-		    httpCon.getOutputStream());
-			out.write(req);
-		out.close();
-		}catch (Exception e) {
-            alert("Result sending failed", "Run to the hills... \n" + e.getMessage());
-        }//*/
+		String response = httpclient.execute(httput, responseHandler);
 	}
 }
