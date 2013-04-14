@@ -1,8 +1,28 @@
 package com.example.coursework;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
+import org.json.JSONObject;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -52,7 +72,12 @@ public class Listen extends Activity {
         {
         	amplitude = getAmplitude();        	
         	stopRecording();
-        	postResult(amplitude);
+    		try {
+				publishResult(amplitude);
+			} catch (Exception e) {
+				e.printStackTrace();
+				alert("Result sending failed", "Run to the hills... \n" + e.getMessage());
+			}
         }
     };
 	
@@ -138,21 +163,45 @@ public class Listen extends Activity {
 	}
 
 	/* ############################## RESULT POSTING PART ############################## */
-	private void postResult(double result)
+	private void publishResult(double result) throws Exception
 	{
 		alert("Amplitude", "So this are the values: " + amplitude);
+		String req = "{";
+		req += "\"title\":\"MUC\",";
+		req += "\"version\":\"1.0.0\",";
+		req += "\"tags\":[ \"Faz\", \"Tiago\", \"MUC\" ],";
+		req += "\"location\":{";
+		req += "\"disposition\":\"fixed\",";
+		req += "\"lat\":"+latitude+",";
+		req += "\"lon\":"+longitude+",";
+		req += "\"domain\":\"physical\"";
+		req += "},";
+		req += "\"datastreams\" : [{ \"current_value\" : \""+result+"\", \"id\" : \"" + latitude + "-" + longitude + "\" }]";
+		req += "}";
 		
-		try{
-		URL url = new URL("http://api.cosm.com/v2/feeds/123308");
+		String url = "http://api.cosm.com/v2/feeds/125086?key=_IlYBldHLBC-ogLz2OMwXRCURmOSAKxIVXRsMi9xZ1ZUZz0g";
+		
+		DefaultHttpClient httpclient = new DefaultHttpClient();
+		HttpPut httput = new HttpPut(url);
+		StringEntity se = new StringEntity(req);
+		httput.setEntity(se);
+		//httput.setHeader("Accept", "application/json");
+		httput.setHeader("Content-type", "text/json");
+
+		ResponseHandler responseHandler = new BasicResponseHandler();
+		String response = httpclient.execute(httput, responseHandler);//*/
+		
+		/*try{
+		URL url = new URL(url);
 		HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
 		httpCon.setDoOutput(true);
 		httpCon.setRequestMethod("PUT");
 		OutputStreamWriter out = new OutputStreamWriter(
 		    httpCon.getOutputStream());
-		out.write("{\"datastreams\":[{\"id\":\"reading_"+result+"\", \"max\": "+result+", \"latitude\":"+latitude+", \"longitude\":"+longitude+"}]}");
+			out.write(req);
 		out.close();
 		}catch (Exception e) {
             alert("Result sending failed", "Run to the hills... \n" + e.getMessage());
-        }
+        }//*/
 	}
 }

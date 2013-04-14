@@ -1,0 +1,159 @@
+package com.example.coursework;
+
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.media.MediaRecorder;
+import android.os.Bundle;
+import android.os.Environment;
+import android.view.View;
+import android.os.Handler;
+
+
+public class Listen extends Activity {
+	
+	double latitude, longitude, amplitude;
+	private MediaRecorder mRecorder = null;
+	private Handler mPeriodicEventHandler;
+	View currentView = null;
+	
+
+	
+	@Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        amplitude = -1;
+        latitude = -1;
+        longitude = -1;
+        setContentView(R.layout.activity_listen);
+    	findViewById(R.id.listen_button).setOnClickListener(new View.OnClickListener() {
+			public void onClick(View v) {
+				currentView = v;
+				startRecording();
+				mPeriodicEventHandler = new Handler();
+			    mPeriodicEventHandler.postDelayed(doPeriodicTask, 3000);			    
+				//alert("cool", getLocation());
+			}
+		});
+    }
+	private Runnable doPeriodicTask = new Runnable()
+    {
+        public void run() 
+        {
+        	amplitude = getAmplitude();        	
+        	stopRecording();
+        	postResult(amplitude);
+        }
+    };
+	
+	public void alert(String title, String message)
+	{
+		AlertDialog.Builder builder = new AlertDialog.Builder(currentView.getContext());
+        builder.setTitle(title);
+        builder.setMessage(message);
+        builder.setNeutralButton("ok", new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int arg1) {
+				dialog.dismiss();
+			}
+		});
+        builder.setCancelable(false);
+        final AlertDialog myAlertDialog = builder.create();
+        myAlertDialog.show();
+	}
+	
+	/* ############################## GEOLOCATION PART ############################## */
+	private String getLocation ()
+	{
+	    LocationManager locationManager = (LocationManager)getSystemService (LOCATION_SERVICE);
+	    String bestProvider = locationManager.getBestProvider (new Criteria (), false);
+	    locationManager.requestLocationUpdates(bestProvider,0 ,0, loc_listener);
+		Location location = locationManager.getLastKnownLocation (bestProvider);
+		try
+		{
+			latitude = location.getLatitude ();
+			longitude = location.getLongitude ();
+		}
+		catch (NullPointerException e)
+		{
+			latitude = -1.0;
+			longitude = -1.0;
+		}
+		return "lat: " + latitude + " lon: " + longitude;
+	  }
+	  LocationListener loc_listener = new LocationListener() {
+		  public void onLocationChanged(Location l) { }
+		  public void onProviderEnabled(String p) { }
+		  public void onProviderDisabled(String p) { }
+		  public void onStatusChanged(String p, int status, Bundle extras) { }      
+	};
+
+	/* ############################## SOUND RECORDING PART ############################## */
+	private void startRecording() {
+		//String mFileName = Environment.getExternalStorageDirectory().getAbsolutePath() + "/testfile.3gp";
+        mRecorder = new MediaRecorder();
+        mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+        mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+        //mRecorder.setOutputFile(mFileName);
+        mRecorder.setOutputFile("/dev/null");
+
+        try {
+            mRecorder.prepare();
+        } catch (Exception e) {
+            alert("Audio recording failed", "Run to the hills... \n" + e.getMessage());
+        }
+    	mRecorder.start();
+    	mRecorder.getMaxAmplitude();
+    }
+	private void stopRecording() {
+        mRecorder.stop();
+        mRecorder.release();
+        mRecorder = null;
+    }
+	@Override
+    public void onDestroy() {
+
+        mPeriodicEventHandler.removeCallbacks(doPeriodicTask);      
+        super.onDestroy();
+    }
+	
+	public double getAmplitude() {
+		try {
+			return mRecorder.getMaxAmplitude();
+		} catch (Exception e) {
+            alert("Audio recording failed", "Run to the hills... \n" + e.getMessage());
+            return -1;
+        }
+	}
+
+	/* ############################## RESULT POSTING PART ############################## */
+	private void postResult(double result)
+	{
+		alert("Amplitude", "So this are the values: " + amplitude);
+		
+		try{
+		URL url = new URL("http://api.cosm.com/v2/feeds/125086.csv?key=_IlYBldHLBC-ogLz2OMwXRCURmOSAKxIVXRsMi9xZ1ZUZz0g");
+		HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
+		httpCon.setDoOutput(true);
+		httpCon.setRequestMethod("PUT");
+		OutputStreamWriter out = new OutputStreamWriter(
+		    httpCon.getOutputStream());
+		//	out.write("{\"datastreams\":[{\"id\":\"reading_"+result+"\", \"max\": "+result+", \"latitude\":"+latitude+", \"longitude\":"+longitude+"}]}");
+			out.write("{\"title\":\"MUC\",\"website\":\"http://www.bbc.ac.uk/\",\"version\":\"1.0.0\",\"tags\":[\"MUC\",\"Faz\", \"Tiago\"],\"location\":{\"disposition\":\"fixed\",\"ele\":\"23.0\",\"name\":\"office\",\"lat\":51.5235375648154,\"exposure\":\"indoor\",\"lon\":-0.0807666778564453,\"domain\":\"physical\"},\"datastreams\" : [ {\"current_value\" : \"-333\",\"id\" : \"4\"},{ \"current_value\" : \"211\",\"id\" : \"0\",\"max_value\" : \"20.0\",\"min_value\" : \"7.0\"},{ \"current_value\" : \"312\",\"id\" : \"3\",\"max_value\" : \"999.0\",\"min_value\" : \"7.0\"}]}");
+		out.close();
+		}catch (Exception e) {
+            alert("Result sending failed", "Run to the hills... \n" + e.getMessage());
+        }
+	}
+}

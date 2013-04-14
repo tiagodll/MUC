@@ -11,4 +11,7 @@
 <fullyQualifiedTypeName name="android.location.Criteria"/>
 <fullyQualifiedTypeName name="android.media.MediaRecorder"/>
 <fullyQualifiedTypeName name="android.os.Environment"/>
+<fullyQualifiedTypeName name="java.net.URL"/>
+<fullyQualifiedTypeName name="java.net.HttpURLConnection"/>
+<fullyQualifiedTypeName name="java.io.OutputStreamWriter"/>
 </qualifiedTypeNameHistroy>
